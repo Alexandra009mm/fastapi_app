@@ -1,10 +1,14 @@
 from logging.config import fileConfig
+import os
 
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
+from dotenv import load_dotenv
 
 from alembic import context
-from sqlmodel import SQLModel
+from sqlmodel import SQLModel, create_engine
+
+load_dotenv()
 
 # Importar los modelos que se quieren migrar aqui
 from src.models.product_model import Product
@@ -42,7 +46,7 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    url = config.get_main_option("sqlalchemy.url")
+    url = config.get_main_option("sqlalchemy.url", os.getenv("Database_url"))
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -54,27 +58,20 @@ def run_migrations_offline() -> None:
         context.run_migrations()
 
 
-def run_migrations_online() -> None:
-    """Run migrations in 'online' mode.
+def run_migrations_online():
+    engine = create_engine(os.getenv("Database_url"))
 
-    In this scenario we need to create an Engine
-    and associate a connection with the context.
-
-    """
-    connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
-        poolclass=pool.NullPool,
-    )
-
-    with connectable.connect() as connection:
+    with engine.connect() as connection:
         context.configure(
-            connection=connection, target_metadata=target_metadata
+            connection=connection,
+            target_metadata=SQLModel.metadata,
         )
 
         with context.begin_transaction():
             context.run_migrations()
 
+
+run_migrations_online()
 
 if context.is_offline_mode():
     run_migrations_offline()
